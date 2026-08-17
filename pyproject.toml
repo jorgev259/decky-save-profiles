@@ -1,0 +1,17 @@
+[project]
+name = "decky-save-profiles"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jorge Vargas", email = "jorgev259@outlook.es" }
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+decky-save-profiles = "decky_save_profiles:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
