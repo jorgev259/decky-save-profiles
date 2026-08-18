@@ -7,10 +7,10 @@ authors = [
     { name = "Jorge Vargas", email = "jorgev259@outlook.es" }
 ]
 requires-python = ">=3.11"
-dependencies = []
-
-[project.scripts]
-decky-save-profiles = "decky_save_profiles:main"
+dependencies = [
+    "aiohttp>=3.14.3",
+    "pyyaml>=6.0.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

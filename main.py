@@ -1,10 +1,17 @@
 import asyncio
 import os
+from typing import Any
 
-# The decky plugin module is located at decky-loader/plugin
+import aiohttp
+import yaml
+from decky_loader.settings import SettingsManager
+
+# The decky plugin module is located at decky-loader/backend/decky_loader/plugin
 # For easy intellisense checkout the decky-loader code repo
-# and add the `decky-loader/plugin/imports` path to `python.analysis.extraPaths` in `.vscode/settings.json`
+# and add the `decky-loader/backend/decky_loader/plugin/imports` path to `python.analysis.extraPaths` in `.vscode/settings.json`
 import decky
+
+LUDOSAVI_MANIFEST_URL: str = "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml"
 
 
 class Plugin:
@@ -13,10 +20,42 @@ class Plugin:
         # Passing through a bunch of random data, just as an example
         await decky.emit("timer_event", "Hello from the backend!", True, 2)
 
+    async def fetch_ludosavi_manifest(self) -> dict[str, Any]:
+        last_etag: str | None = self.settings.getSetting("ludosavi_etag")
+
+        headers: dict[str, str] = {}
+        if last_etag is not None:
+            headers["If-None-Match"] = last_etag
+
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(LUDOSAVI_MANIFEST_URL, headers=headers) as response,
+        ):
+            if response.status == 304:
+                decky.logger.info("Ludosavi manifest is up to date.")
+                return {}
+
+            if response.status == 200:
+                new_etag = response.headers.get("ETag")
+                if new_etag is not None:
+                    self.settings.setSetting("ludosavi_etag", new_etag)
+                manifest = yaml.safe_load(await response.text())
+                decky.logger.info("Ludosavi manifest updated.")
+                return manifest
+
+            decky.logger.error(
+                f"Failed to fetch ludosavi manifest: HTTP {response.status}"
+            )
+            return {}
+
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
         self.loop = asyncio.get_event_loop()
+        self.settings = SettingsManager(
+            "save-profiles", decky.DECKY_PLUGIN_SETTINGS_DIR
+        )
         decky.logger.info("Hello World!")
+        await self.fetch_ludosavi_manifest()
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
     # completely removed
